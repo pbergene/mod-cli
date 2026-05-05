@@ -13,6 +13,8 @@ from mod_cli.core import config, runner
 
 app = typer.Typer(help="GitHub CLI helpers.")
 
+REQUIRED_TOOLS = ["gh", "git"]
+
 
 @app.command("prs")
 def prs(

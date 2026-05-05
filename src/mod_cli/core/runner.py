@@ -16,12 +16,13 @@ import typer
 
 
 def check_tool(name: str) -> None:
-    """Exit with a clear error if *name* is not found in PATH."""
-    if shutil.which(name) is None:
-        typer.echo(
-            f"[error] required tool not found in PATH: {name!r}", err=True
-        )
-        raise typer.Exit(code=1)
+    """Exit with a rich error panel if *name* is not found in PATH.
+
+    Delegates to :func:`mod_cli.core.deps.check` so all call sites
+    automatically get the registry-backed install hints.
+    """
+    from mod_cli.core import deps  # local import avoids circular dependency
+    deps.check(name)
 
 
 def run(

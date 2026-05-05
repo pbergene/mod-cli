@@ -11,6 +11,8 @@ from mod_cli.core import runner
 
 app = typer.Typer(help="Git workflow helpers.")
 
+REQUIRED_TOOLS = ["git", "gh"]
+
 
 @app.command("clean-branches")
 def clean_branches(

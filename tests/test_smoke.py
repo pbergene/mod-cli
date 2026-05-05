@@ -20,6 +20,16 @@ def test_help():
     assert "git" in result.output
     assert "gh" in result.output
     assert "kube" in result.output
+    assert "doctor" in result.output
+
+
+def test_doctor_runs():
+    """mod doctor should always exit (0 or 1) and print the tool table."""
+    result = runner.invoke(app, ["doctor"])
+    # exit code depends on what's installed in CI; just check it ran and printed output
+    assert result.exit_code in (0, 1)
+    assert "git" in result.output
+    assert "gh" in result.output
 
 
 def test_git_help():

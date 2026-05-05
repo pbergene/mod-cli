@@ -11,6 +11,10 @@ from mod_cli.core import config, runner
 
 app = typer.Typer(help="kubectl / oc helpers.")
 
+# oc, jq, yq, grep are optional — only needed for specific subcommands
+REQUIRED_TOOLS = ["kubectl"]
+OPTIONAL_TOOLS = ["oc", "jq", "yq", "grep"]
+
 _KUBECTL = "kubectl"  # override with OC=1 env var or --oc flag
 
 

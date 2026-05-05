@@ -11,6 +11,7 @@ from rich import print as rprint
 
 from mod_cli import __version__
 from mod_cli.commands import gh_cmd, git_cmd, kube_cmd
+from mod_cli.core import deps
 
 app = typer.Typer(
     name="mod",
@@ -34,6 +35,26 @@ def _root(
     if version:
         rprint(f"mod-cli [bold]{__version__}[/bold]")
         raise typer.Exit()
+
+
+@app.command("doctor")
+def doctor() -> None:
+    """Check that all required external tools are installed.
+
+    Prints a status table for every tool in the registry.
+    Exits with code 1 if any required tool is missing.
+    """
+    rprint(deps.status_table())
+
+    missing = deps.missing_count()
+    if missing:
+        rprint(
+            f"\n[red bold]{missing} required tool(s) missing.[/red bold] "
+            "Install them using the links above, then re-run [bold]mod doctor[/bold]."
+        )
+        raise typer.Exit(code=1)
+    else:
+        rprint("\n[green bold]All required tools found. ✓[/green bold]")
 
 
 def main() -> None:
