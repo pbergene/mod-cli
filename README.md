@@ -8,22 +8,23 @@ Modular administrative CLI wrapping `gh`, `git`, and `kubectl`/`oc` with `jq`/`y
 
 ### 1. Dependencies
 
-Install the external tools that `mod` wraps. Use the instructions for your distro.
+Install the external tools that `mod` wraps. Choose your distribution and version.
 
-> **Kubernetes vs OpenShift:** `kubectl` targets standard Kubernetes clusters. `oc` is the OpenShift CLI and is a strict superset of `kubectl` — if you are on OpenShift, install `oc` and skip `kubectl`. If you work with both, you can install both; use `--oc` on any `mod kube` command to switch.
+#### Fedora 42, 43, 44
 
-#### Fedora
+All three releases ship `git`, `jq`, `yq`, and `uv` in the official Fedora repositories
+and use DNF5 as the default package manager.
 
 ```bash
 # Core tools
-sudo dnf install -y git jq
+sudo dnf install -y git jq yq uv
 
 # GitHub CLI
-sudo dnf install -y 'dnf-command(config-manager)'
-sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
-sudo dnf install -y gh
+sudo dnf install -y dnf5-plugins
+sudo dnf config-manager addrepo --from-repofile=https://cli.github.com/packages/rpm/gh-cli.repo
+sudo dnf install -y gh --repo gh-cli
 
-# kubectl  (skip if using OpenShift — install oc instead, see below)
+# kubectl — skip if using OpenShift
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -34,42 +35,34 @@ gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
 EOF
 sudo dnf install -y kubectl
 
-# oc — OpenShift CLI  (skip if using plain Kubernetes — install kubectl instead, see above)
-# Download the latest stable release for your OCP version from:
+# oc — OpenShift CLI, skip if using plain Kubernetes
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
 OCP_VERSION=4.15.0   # replace with your cluster version
 curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz"
-tar -xzf openshift-client-linux.tar.gz oc kubectl
+tar -xzf openshift-client-linux.tar.gz oc
 sudo install -m 0755 oc /usr/local/bin/oc
-
-# yq (no official Fedora package — install via the upstream binary)
-sudo wget -qO /usr/local/bin/yq \
-  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-sudo chmod +x /usr/local/bin/yq
-
-# uv (Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-#### Debian / Ubuntu
+#### Debian 11 (Bullseye), 12 (Bookworm), 13 (Trixie)
+
+`yq` in apt is a different tool (`kislyuk/yq`); install mikefarah/yq from upstream.
+`uv` is not yet in the Debian repositories; install from the upstream release.
 
 ```bash
 # Core tools
-sudo apt-get update && sudo apt-get install -y git jq
+sudo apt-get update && sudo apt-get install -y git jq curl gpg wget
 
 # GitHub CLI
-sudo apt-get install -y curl gpg
-curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) \
-  signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+sudo mkdir -p -m 755 /etc/apt/keyrings
+wget -nv -O /tmp/githubcli.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
+sudo mv /tmp/githubcli.gpg /etc/apt/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
   https://cli.github.com/packages stable main" \
   | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
 sudo apt-get update && sudo apt-get install -y gh
 
-# kubectl  (skip if using OpenShift — install oc instead, see below)
-sudo apt-get install -y apt-transport-https ca-certificates
+# kubectl — skip if using OpenShift
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
   | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
@@ -77,21 +70,66 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
   | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
 sudo apt-get update && sudo apt-get install -y kubectl
 
-# oc — OpenShift CLI  (skip if using plain Kubernetes — install kubectl instead, see above)
-# Download the latest stable release for your OCP version from:
+# oc — OpenShift CLI, skip if using plain Kubernetes
 # https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
 OCP_VERSION=4.15.0   # replace with your cluster version
 curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz"
-tar -xzf openshift-client-linux.tar.gz oc kubectl
+tar -xzf openshift-client-linux.tar.gz oc
 sudo install -m 0755 oc /usr/local/bin/oc
 
-# yq (no official Debian package — install via the upstream binary)
+# yq — upstream binary (mikefarah/yq)
 sudo wget -qO /usr/local/bin/yq \
   https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
 sudo chmod +x /usr/local/bin/yq
 
-# uv (Python package manager)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# uv — upstream binary
+curl -LO https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf uv-x86_64-unknown-linux-gnu.tar.gz
+sudo install -m 0755 uv-*/uv /usr/local/bin/uv
+```
+
+#### Ubuntu 20.04 (Focal), 22.04 (Jammy), 24.04 (Noble)
+
+Same `apt-get` commands as Debian above — all tools install identically across these releases.
+
+```bash
+# Core tools
+sudo apt-get update && sudo apt-get install -y git jq curl gpg wget
+
+# GitHub CLI
+sudo mkdir -p -m 755 /etc/apt/keyrings
+wget -nv -O /tmp/githubcli.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
+sudo mv /tmp/githubcli.gpg /etc/apt/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
+  https://cli.github.com/packages stable main" \
+  | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt-get update && sudo apt-get install -y gh
+
+# kubectl — skip if using OpenShift
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+  https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
+  | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
+sudo apt-get update && sudo apt-get install -y kubectl
+
+# oc — OpenShift CLI, skip if using plain Kubernetes
+# https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
+OCP_VERSION=4.15.0   # replace with your cluster version
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz"
+tar -xzf openshift-client-linux.tar.gz oc
+sudo install -m 0755 oc /usr/local/bin/oc
+
+# yq — upstream binary (mikefarah/yq)
+sudo wget -qO /usr/local/bin/yq \
+  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+sudo chmod +x /usr/local/bin/yq
+
+# uv — upstream binary
+curl -LO https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz
+tar -xzf uv-x86_64-unknown-linux-gnu.tar.gz
+sudo install -m 0755 uv-*/uv /usr/local/bin/uv
 ```
 
 ### 2. mod-cli itself
