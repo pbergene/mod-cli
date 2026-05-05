@@ -10,6 +10,8 @@ Modular administrative CLI wrapping `gh`, `git`, and `kubectl`/`oc` with `jq`/`y
 
 Install the external tools that `mod` wraps. Use the instructions for your distro.
 
+> **Kubernetes vs OpenShift:** `kubectl` targets standard Kubernetes clusters. `oc` is the OpenShift CLI and is a strict superset of `kubectl` — if you are on OpenShift, install `oc` and skip `kubectl`. If you work with both, you can install both; use `--oc` on any `mod kube` command to switch.
+
 #### Fedora
 
 ```bash
@@ -21,7 +23,7 @@ sudo dnf install -y 'dnf-command(config-manager)'
 sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
 sudo dnf install -y gh
 
-# kubectl
+# kubectl  (skip if using OpenShift — install oc instead, see below)
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -31,6 +33,14 @@ gpgcheck=1
 gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
 EOF
 sudo dnf install -y kubectl
+
+# oc — OpenShift CLI  (skip if using plain Kubernetes — install kubectl instead, see above)
+# Download the latest stable release for your OCP version from:
+# https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
+OCP_VERSION=4.15.0   # replace with your cluster version
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz"
+tar -xzf openshift-client-linux.tar.gz oc kubectl
+sudo install -m 0755 oc /usr/local/bin/oc
 
 # yq (no official Fedora package — install via the upstream binary)
 sudo wget -qO /usr/local/bin/yq \
@@ -58,7 +68,7 @@ echo "deb [arch=$(dpkg --print-architecture) \
   | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
 sudo apt-get update && sudo apt-get install -y gh
 
-# kubectl
+# kubectl  (skip if using OpenShift — install oc instead, see below)
 sudo apt-get install -y apt-transport-https ca-certificates
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
   | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
@@ -66,6 +76,14 @@ echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
   https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
   | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
 sudo apt-get update && sudo apt-get install -y kubectl
+
+# oc — OpenShift CLI  (skip if using plain Kubernetes — install kubectl instead, see above)
+# Download the latest stable release for your OCP version from:
+# https://mirror.openshift.com/pub/openshift-v4/clients/ocp/
+OCP_VERSION=4.15.0   # replace with your cluster version
+curl -LO "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/${OCP_VERSION}/openshift-client-linux.tar.gz"
+tar -xzf openshift-client-linux.tar.gz oc kubectl
+sudo install -m 0755 oc /usr/local/bin/oc
 
 # yq (no official Debian package — install via the upstream binary)
 sudo wget -qO /usr/local/bin/yq \
@@ -75,8 +93,6 @@ sudo chmod +x /usr/local/bin/yq
 # uv (Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
-
-> **OpenShift users:** install `oc` from the [OpenShift mirror](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) instead of (or alongside) `kubectl`.
 
 ### 2. mod-cli itself
 
