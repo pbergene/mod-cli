@@ -6,17 +6,88 @@ Modular administrative CLI wrapping `gh`, `git`, and `kubectl`/`oc` with `jq`/`y
 
 ## Install
 
-```bash
-# Install uv if you haven't already
-curl -LsSf https://astral.sh/uv/install.sh | sh
+### 1. Dependencies
 
-# Clone and install globally
+Install the external tools that `mod` wraps. Use the instructions for your distro.
+
+#### Fedora
+
+```bash
+# Core tools
+sudo dnf install -y git jq
+
+# GitHub CLI
+sudo dnf install -y 'dnf-command(config-manager)'
+sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+sudo dnf install -y gh
+
+# kubectl
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key
+EOF
+sudo dnf install -y kubectl
+
+# yq (no official Fedora package — install via the upstream binary)
+sudo wget -qO /usr/local/bin/yq \
+  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+sudo chmod +x /usr/local/bin/yq
+
+# uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+#### Debian / Ubuntu
+
+```bash
+# Core tools
+sudo apt-get update && sudo apt-get install -y git jq
+
+# GitHub CLI
+sudo apt-get install -y curl gpg
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+  | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+  https://cli.github.com/packages stable main" \
+  | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+sudo apt-get update && sudo apt-get install -y gh
+
+# kubectl
+sudo apt-get install -y apt-transport-https ca-certificates
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key \
+  | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] \
+  https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" \
+  | sudo tee /etc/apt/sources.list.d/kubernetes.list > /dev/null
+sudo apt-get update && sudo apt-get install -y kubectl
+
+# yq (no official Debian package — install via the upstream binary)
+sudo wget -qO /usr/local/bin/yq \
+  https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+sudo chmod +x /usr/local/bin/yq
+
+# uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+> **OpenShift users:** install `oc` from the [OpenShift mirror](https://mirror.openshift.com/pub/openshift-v4/clients/ocp/) instead of (or alongside) `kubectl`.
+
+### 2. mod-cli itself
+
+```bash
 git clone https://github.com/pbergene/mod-cli.git
 cd mod-cli
 uv tool install .
 
-# The 'mod' command is now available in your PATH
+# Verify
 mod --version
+mod doctor          # checks all external tools are reachable
 ```
 
 ## Usage
