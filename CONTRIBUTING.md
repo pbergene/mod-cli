@@ -30,7 +30,7 @@ By participating you agree to abide by its terms.
 
 ### Prerequisites
 
-- [uv](https://docs.astral.sh/uv/) ≥ 0.11 — the only tool you need to install manually
+- [uv](https://docs.astral.sh/uv/) ≥ 0.11 — install via `dnf install uv` (Fedora) or the [upstream binary](https://github.com/astral-sh/uv/releases/latest) (Debian/Ubuntu)
 - Python ≥ 3.11 (managed automatically by uv)
 - External tools that commands wrap: `gh`, `git`, `kubectl`/`oc`, `jq`, `yq`
   (only needed when running the relevant commands, not for the test suite)
