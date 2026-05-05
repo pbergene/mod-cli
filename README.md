@@ -75,39 +75,16 @@ owner = "my-org"
 format = "table"  # table | json | yaml
 ```
 
-## Adding a new command group
+## Contributing
 
-1. Create `src/mod_cli/commands/mytool_cmd.py`:
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
-```python
-import typer
-from mod_cli.core import runner
+- Setup and dev workflow (`uv sync`, `uv run pytest`)
+- How to add a new command group (one file + one line)
+- Code style, test requirements, and commit format
+- PR process
 
-app = typer.Typer(help="My tool helpers.")
-
-@app.command("hello")
-def hello(name: str = typer.Argument("world")) -> None:
-    """Say hello."""
-    runner.check_tool("echo")
-    runner.run(["echo", f"Hello, {name}!"])
-```
-
-2. Register it in `src/mod_cli/cli.py`:
-
-```python
-from mod_cli.commands import mytool_cmd
-app.add_typer(mytool_cmd.app, name="mytool")
-```
-
-That's it — `mod mytool hello` is now available.
-
-## Development
-
-```bash
-uv sync              # install deps into managed venv
-uv run pytest        # run tests
-uv run mod --help    # run CLI without installing
-```
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ## License
 
