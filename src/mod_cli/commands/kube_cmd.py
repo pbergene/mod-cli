@@ -5,13 +5,17 @@ import json
 
 import typer
 from rich import print as rprint
-from rich.table import Table
 
-from mod_cli.core import config, runner
+from mod_cli.core import config, output, runner
+from mod_cli.core.output import OutputFormat
 
 app = typer.Typer(help="kubectl / oc helpers.")
 
-_KUBECTL = "kubectl"  # override with OC=1 env var or --oc flag
+# oc, jq, yq, grep are optional — only needed for specific subcommands
+REQUIRED_TOOLS = ["kubectl"]
+OPTIONAL_TOOLS = ["oc", "jq", "yq", "grep"]
+
+_KUBECTL = "kubectl"
 
 
 def _kubectl(use_oc: bool = False) -> str:
@@ -39,52 +43,41 @@ def pods(
     jq_filter: str = typer.Option("", "--jq", help="jq filter applied to JSON output."),
     yq_filter: str = typer.Option("", "--yq", help="yq filter applied to YAML output."),
     use_oc: bool = typer.Option(False, "--oc", help="Use 'oc' instead of 'kubectl'."),
+    fmt: OutputFormat = output.output_option(),
 ) -> None:
     """List pods in a namespace."""
     tool = _kubectl(use_oc)
     args = _ctx_args(namespace, context)
 
     if jq_filter or yq_filter:
-        fmt = "json" if jq_filter else "yaml"
-        result = runner.run([tool, "get", "pods", "-o", fmt] + args, capture=True)
-        output = runner.jq(result.stdout, jq_filter) if jq_filter else runner.yq(result.stdout, yq_filter)
-        rprint(output)
+        fmt_flag = "json" if jq_filter else "yaml"
+        result = runner.run([tool, "get", "pods", "-o", fmt_flag] + args, capture=True)
+        out = runner.jq(result.stdout, jq_filter) if jq_filter else runner.yq(result.stdout, yq_filter)
+        print(out, end="")
         return
 
-    result = runner.run(
-        [tool, "get", "pods", "-o", "json"] + args, capture=True
-    )
+    result = runner.run([tool, "get", "pods", "-o", "json"] + args, capture=True)
     data = json.loads(result.stdout)
     items = data.get("items", [])
 
-    if not items:
-        rprint("[yellow]No pods found.[/yellow]")
-        return
-
-    table = Table(title="Pods", show_header=True, header_style="bold magenta")
-    table.add_column("Name", style="cyan")
-    table.add_column("Status")
-    table.add_column("Ready")
-    table.add_column("Restarts", style="yellow")
-    table.add_column("Age")
-
+    rows = []
     for item in items:
         meta = item.get("metadata", {})
         status = item.get("status", {})
-        phase = status.get("phase", "Unknown")
         containers = status.get("containerStatuses", [])
-        ready = f"{sum(1 for c in containers if c.get('ready'))}/{len(containers)}"
-        restarts = str(sum(c.get("restartCount", 0) for c in containers))
-        phase_style = {"Running": "[green]", "Pending": "[yellow]", "Failed": "[red]"}.get(phase, "")
-        table.add_row(
-            meta.get("name", ""),
-            f"{phase_style}{phase}[/]" if phase_style else phase,
-            ready,
-            restarts,
-            meta.get("creationTimestamp", "")[:10],
-        )
+        rows.append({
+            "name": meta.get("name", ""),
+            "status": status.get("phase", "Unknown"),
+            "ready": f"{sum(1 for c in containers if c.get('ready'))}/{len(containers)}",
+            "restarts": str(sum(c.get("restartCount", 0) for c in containers)),
+            "age": meta.get("creationTimestamp", "")[:10],
+        })
 
-    rprint(table)
+    output.print_output(
+        rows, fmt=fmt,
+        columns=["name", "status", "ready", "restarts", "age"],
+        title="Pods",
+    )
 
 
 @app.command("top")
@@ -101,6 +94,7 @@ def top(
 @app.command("ctx")
 def ctx(
     name: str = typer.Argument("", help="Context name to switch to. Omit to list available contexts."),
+    fmt: OutputFormat = output.output_option(),
 ) -> None:
     """Switch or list kubectl contexts."""
     runner.check_tool("kubectl")
@@ -110,7 +104,7 @@ def ctx(
         return
 
     runner.run(["kubectl", "config", "use-context", name])
-    rprint(f"[green]Switched to context:[/green] {name}")
+    output.print_record({"context": name, "status": "active"}, fmt=fmt)
 
 
 @app.command("logs")
@@ -137,6 +131,6 @@ def logs(
     if grep:
         runner.check_tool("grep")
         result = runner.run(cmd, capture=True)
-        runner.run(["grep", grep], input=result.stdout)  # type: ignore[call-arg]
+        runner.run(["grep", grep], input=result.stdout)
     else:
         runner.run(cmd)
